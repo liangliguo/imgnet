@@ -133,7 +133,7 @@ uv run --locked python train.py \
 
 在 Kaggle 新建 Notebook 后，右侧 `Settings` 中设置：
 
-- `Accelerator`：`GPU P100`
+- `Accelerator`：`GPU T4 x2`
 - `Internet`：`On`
 
 添加 Tiny ImageNet 数据集：
@@ -189,6 +189,7 @@ print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU")
   --epochs 1 \
   --batch-size 64 \
   --num-workers 2 \
+  --data-parallel \
   --amp
 ```
 
@@ -202,6 +203,7 @@ print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU")
   --batch-size 128 \
   --num-workers 2 \
   --lr 0.1 \
+  --data-parallel \
   --amp
 ```
 

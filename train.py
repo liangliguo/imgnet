@@ -50,6 +50,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--no-cifar-stem", action="store_true")
     parser.add_argument("--amp", action="store_true", help="Enable CUDA mixed precision.")
+    parser.add_argument(
+        "--data-parallel",
+        action="store_true",
+        help="Use torch.nn.DataParallel when multiple CUDA GPUs are available.",
+    )
     parser.add_argument("--resume", default="", help="Path to checkpoint to resume.")
     return parser.parse_args()
 
@@ -63,6 +68,10 @@ def set_seed(seed: int) -> None:
 
 def current_lr(optimizer: torch.optim.Optimizer) -> float:
     return float(optimizer.param_groups[0]["lr"])
+
+
+def unwrap_model(model: nn.Module) -> nn.Module:
+    return model.module if isinstance(model, nn.DataParallel) else model
 
 
 def train_one_epoch(
@@ -166,7 +175,7 @@ def save_checkpoint(
     torch.save(
         {
             "epoch": epoch,
-            "model_state": model.state_dict(),
+            "model_state": unwrap_model(model).state_dict(),
             "optimizer_state": optimizer.state_dict(),
             "scheduler_state": scheduler.state_dict(),
             "best_val_top1": best_val_top1,
@@ -248,7 +257,7 @@ def load_resume(
     device: torch.device,
 ) -> tuple[int, float, int, dict[str, float]]:
     checkpoint = torch.load(checkpoint_path, map_location=device)
-    model.load_state_dict(checkpoint["model_state"])
+    unwrap_model(model).load_state_dict(checkpoint["model_state"])
     optimizer.load_state_dict(checkpoint["optimizer_state"])
     scheduler.load_state_dict(checkpoint["scheduler_state"])
     return (
@@ -280,6 +289,9 @@ def main() -> None:
         num_classes=len(class_to_idx),
         cifar_stem=not args.no_cifar_stem,
     ).to(device)
+    if args.data_parallel and device.type == "cuda" and torch.cuda.device_count() > 1:
+        model = nn.DataParallel(model)
+
     criterion = nn.CrossEntropyLoss(label_smoothing=args.label_smoothing)
     optimizer = SGD(
         model.parameters(),
