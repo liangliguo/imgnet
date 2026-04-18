@@ -151,7 +151,7 @@ https://github.com/liangliguo/imgnet
 训练使用的数据根目录：
 
 ```text
-/kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200
+/kaggle/working/tiny-imagenet-200
 ```
 
 在 Kaggle Notebook 中依次执行下面的单元。
@@ -180,15 +180,22 @@ print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU")
 !pip install -q -r requirements.txt
 ```
 
+复制数据集到 Kaggle 本地工作目录：
+
+```python
+!cp -r /kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200 \
+  /kaggle/working/tiny-imagenet-200
+```
+
 快速检查训练流程：
 
 ```python
 !python train.py \
-  --data-root /kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200 \
+  --data-root /kaggle/working/tiny-imagenet-200 \
   --output-dir /kaggle/working/runs/debug \
   --epochs 1 \
-  --batch-size 64 \
-  --num-workers 2 \
+  --batch-size 128 \
+  --num-workers 4 \
   --data-parallel \
   --amp
 ```
@@ -199,7 +206,7 @@ print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU")
 device=cuda
 cuda_available=True
 cuda_device_count=2
-data_root=/kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200
+data_root=/kaggle/working/tiny-imagenet-200
 output_dir=/kaggle/working/runs/debug
 building_dataloaders=start
 building_dataloaders=done
@@ -215,11 +222,11 @@ start train epoch 1
 
 ```python
 !python train.py \
-  --data-root /kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200 \
+  --data-root /kaggle/working/tiny-imagenet-200 \
   --output-dir /kaggle/working/runs/resnet18_tinyimagenet \
   --epochs 90 \
-  --batch-size 128 \
-  --num-workers 2 \
+  --batch-size 256 \
+  --num-workers 4 \
   --lr 0.1 \
   --data-parallel \
   --amp
@@ -229,7 +236,7 @@ FGSM 和 PGD 评估：
 
 ```python
 !python evaluate_attacks.py \
-  --data-root /kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200 \
+  --data-root /kaggle/working/tiny-imagenet-200 \
   --checkpoint /kaggle/working/runs/resnet18_tinyimagenet/best.pt \
   --output /kaggle/working/runs/resnet18_tinyimagenet/attack_report.json \
   --eps 8/255 \
@@ -248,6 +255,11 @@ Kaggle 路径约定：
 
 - `/kaggle/input`：只读，用于读取数据集。
 - `/kaggle/working`：可写，用于保存 checkpoint、日志和报告。
+
+训练时 CPU 占用高是正常现象。JPEG 解码、随机裁剪、归一化和 DataLoader
+worker 都运行在 CPU；GPU 显存只有几百 MB 时，通常表示模型已经加载，但还在等
+CPU 把 batch 准备好。把数据复制到 `/kaggle/working` 并使用更大的 batch size
+可以减少双 T4 空等。
 
 ## 可汇报的模型质量指标
 
