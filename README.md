@@ -193,6 +193,18 @@ print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU")
   --amp
 ```
 
+训练启动后会输出：
+
+```text
+device=cuda
+cuda_device_count=2
+train_images=100000
+val_images=10000
+data_parallel=true
+epoch 1/1 lr=0.100000
+start train epoch 1
+```
+
 正式训练：
 
 ```python

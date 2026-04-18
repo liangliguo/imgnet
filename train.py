@@ -74,6 +74,10 @@ def unwrap_model(model: nn.Module) -> nn.Module:
     return model.module if isinstance(model, nn.DataParallel) else model
 
 
+def log(message: str) -> None:
+    print(message, flush=True)
+
+
 def train_one_epoch(
     model: nn.Module,
     loader: torch.utils.data.DataLoader,
@@ -89,7 +93,8 @@ def train_one_epoch(
     top1_meter = AverageMeter()
     top5_meter = AverageMeter()
 
-    progress = tqdm(loader, desc=f"train {epoch}", leave=False)
+    log(f"start train epoch {epoch}")
+    progress = tqdm(loader, desc=f"train {epoch}", leave=True, dynamic_ncols=True)
     for images, targets in progress:
         images = images.to(device, non_blocking=True)
         targets = targets.to(device, non_blocking=True)
@@ -133,7 +138,8 @@ def evaluate(
     top1_meter = AverageMeter()
     top5_meter = AverageMeter()
 
-    progress = tqdm(loader, desc=f"val {epoch}", leave=False)
+    log(f"start validation epoch {epoch}")
+    progress = tqdm(loader, desc=f"val {epoch}", leave=True, dynamic_ncols=True)
     for images, targets in progress:
         images = images.to(device, non_blocking=True)
         targets = targets.to(device, non_blocking=True)
@@ -277,6 +283,15 @@ def main() -> None:
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     use_amp = bool(args.amp and device.type == "cuda")
+    log(f"device={device}")
+    log(f"cuda_available={torch.cuda.is_available()}")
+    if device.type == "cuda":
+        log(f"cuda_device_count={torch.cuda.device_count()}")
+        for index in range(torch.cuda.device_count()):
+            log(f"gpu{index}={torch.cuda.get_device_name(index)}")
+    log(f"data_root={args.data_root}")
+    log(f"output_dir={args.output_dir}")
+
     train_loader, val_loader, class_to_idx = make_dataloaders(
         data_root=args.data_root,
         batch_size=args.batch_size,
@@ -284,6 +299,9 @@ def main() -> None:
         image_size=args.image_size,
         pin_memory=device.type == "cuda",
     )
+    log(f"train_images={len(train_loader.dataset)}")
+    log(f"val_images={len(val_loader.dataset)}")
+    log(f"num_classes={len(class_to_idx)}")
 
     model = build_resnet18(
         num_classes=len(class_to_idx),
@@ -291,6 +309,9 @@ def main() -> None:
     ).to(device)
     if args.data_parallel and device.type == "cuda" and torch.cuda.device_count() > 1:
         model = nn.DataParallel(model)
+        log("data_parallel=true")
+    else:
+        log("data_parallel=false")
 
     criterion = nn.CrossEntropyLoss(label_smoothing=args.label_smoothing)
     optimizer = SGD(
@@ -322,6 +343,7 @@ def main() -> None:
     for epoch in range(start_epoch, args.epochs + 1):
         started = time.time()
         lr_used = current_lr(optimizer)
+        log(f"epoch {epoch}/{args.epochs} lr={lr_used:.6f}")
         train_metrics = train_one_epoch(
             model,
             train_loader,
@@ -392,7 +414,7 @@ def main() -> None:
             num_parameters=num_parameters,
         )
 
-        print(
+        log(
             "epoch "
             f"{epoch:03d}/{args.epochs:03d} "
             f"train_top1={train_metrics['top1']:.2f} "
