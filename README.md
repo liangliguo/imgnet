@@ -136,12 +136,6 @@ uv run --locked python train.py \
 - `Accelerator`：`GPU T4 x2`
 - `Internet`：`On`
 
-添加 Tiny ImageNet 数据集：
-
-```text
-/kaggle/input/datasets/akash2sharma/tiny-imagenet
-```
-
 本项目的 GitHub 地址：
 
 ```text
@@ -180,11 +174,17 @@ print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU")
 !pip install -q -r requirements.txt
 ```
 
-复制数据集到 Kaggle 本地工作目录：
+下载 Tiny ImageNet 官方压缩包：
 
 ```python
-!cp -r /kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200 \
-  /kaggle/working/tiny-imagenet-200
+!curl -L http://cs231n.stanford.edu/tiny-imagenet-200.zip \
+  -o /kaggle/working/tiny-imagenet-200.zip
+```
+
+解压数据集：
+
+```python
+!unzip -q /kaggle/working/tiny-imagenet-200.zip -d /kaggle/working
 ```
 
 快速检查训练流程：
@@ -274,12 +274,11 @@ FGSM 和 PGD 评估：
 
 Kaggle 路径约定：
 
-- `/kaggle/input`：只读，用于读取数据集。
-- `/kaggle/working`：可写，用于保存 checkpoint、日志和报告。
+- `/kaggle/working`：可写，用于保存数据集、checkpoint、日志和报告。
 
 训练时 CPU 占用高是正常现象。JPEG 解码、随机裁剪、归一化和 DataLoader
 worker 都运行在 CPU；GPU 显存只有几百 MB 时，通常表示模型已经加载，但还在等
-CPU 把 batch 准备好。把数据复制到 `/kaggle/working` 并使用更大的 batch size
+CPU 把 batch 准备好。把数据解压到 `/kaggle/working` 并使用更大的 batch size
 可以减少双 T4 空等。
 
 ## 可汇报的模型质量指标
