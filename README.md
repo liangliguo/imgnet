@@ -138,13 +138,19 @@ Kaggle 数据集路径：
 /kaggle/input/datasets/akash2sharma/tiny-imagenet
 ```
 
+实际训练时使用的 `--data-root`：
+
+```text
+/kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200
+```
+
 推荐流程：
 
 1. 在 Kaggle 新建 Notebook。
 2. 点击右侧 `Settings`：
    - `Accelerator` 选择 `GPU`。
    - 打开 `Internet`，用于从 GitHub 克隆代码。
-3. 添加 Tiny ImageNet 数据集，确保 Notebook 中能访问：
+3. 添加 Tiny ImageNet 数据集，确保 Notebook 中能访问挂载目录：
 
 ```text
 /kaggle/input/datasets/akash2sharma/tiny-imagenet
@@ -181,17 +187,20 @@ Kaggle 通常已经预装 PyTorch。如果依赖缺失，再执行：
 ```
 
 训练脚本要求 `--data-root` 指向包含 `train/`、`val/`、`wnids.txt` 的目录。
-如果上面的 `find` 输出显示这些目录就在下面这个路径中：
+根据当前 Kaggle 输出，应使用下面这个目录：
 
 ```text
-/kaggle/input/datasets/akash2sharma/tiny-imagenet
+/kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200
 ```
 
-则训练命令为：
+不要把更外层的 `/kaggle/input/datasets/akash2sharma/tiny-imagenet` 传给
+`--data-root`，因为它下面还套了一层 `tiny-imagenet-200`。
+
+训练命令：
 
 ```python
 !python train.py \
-  --data-root /kaggle/input/datasets/akash2sharma/tiny-imagenet \
+  --data-root /kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200 \
   --output-dir /kaggle/working/runs/resnet18_tinyimagenet \
   --epochs 90 \
   --batch-size 128 \
@@ -203,14 +212,14 @@ Kaggle 通常已经预装 PyTorch。如果依赖缺失，再执行：
 如果 `find` 输出显示实际结构是：
 
 ```text
-/kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200/train
-/kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200/val
+/kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200/tiny-imagenet-200/train
+/kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200/tiny-imagenet-200/val
 ```
 
 则把训练命令里的 `--data-root` 改为：
 
 ```text
-/kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200
+/kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200/tiny-imagenet-200
 ```
 
 如果显存不足，把 `--batch-size 128` 改成 `64` 或 `32`。
@@ -238,7 +247,7 @@ resnet18_tinyimagenet_outputs.zip
 
 ```python
 !python train.py \
-  --data-root /kaggle/input/datasets/akash2sharma/tiny-imagenet \
+  --data-root /kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200 \
   --output-dir /kaggle/working/runs/resnet18_tinyimagenet \
   --epochs 90 \
   --batch-size 128 \
@@ -252,7 +261,7 @@ resnet18_tinyimagenet_outputs.zip
 
 ```python
 !python evaluate_attacks.py \
-  --data-root /kaggle/input/datasets/akash2sharma/tiny-imagenet \
+  --data-root /kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200 \
   --checkpoint /kaggle/working/runs/resnet18_tinyimagenet/best.pt \
   --output /kaggle/working/runs/resnet18_tinyimagenet/attack_report.json \
   --eps 8/255 \
