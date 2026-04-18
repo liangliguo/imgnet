@@ -6,11 +6,64 @@ from typing import Dict, Optional, Tuple
 from PIL import Image
 import torch
 from torch.utils.data import DataLoader, Dataset
-from torchvision import datasets, transforms
+from torchvision import transforms
 
 
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
+
+
+class TinyImageNetTrainDataset(Dataset):
+    """Tiny ImageNet train split using wnids.txt and class image folders."""
+
+    def __init__(
+        self,
+        root: str | Path,
+        transform: Optional[transforms.Compose] = None,
+    ) -> None:
+        self.root = Path(root)
+        self.transform = transform
+        self.train_dir = self.root / "train"
+        wnids_path = self.root / "wnids.txt"
+
+        if not self.train_dir.exists():
+            raise FileNotFoundError(f"Missing Tiny ImageNet train directory: {self.train_dir}")
+
+        if wnids_path.exists():
+            with wnids_path.open("r", encoding="utf-8") as handle:
+                class_ids = [line.strip() for line in handle if line.strip()]
+        else:
+            class_ids = sorted(path.name for path in self.train_dir.iterdir() if path.is_dir())
+
+        self.classes = class_ids
+        self.class_to_idx = {class_id: index for index, class_id in enumerate(class_ids)}
+
+        samples = []
+        for class_id in class_ids:
+            class_dir = self.train_dir / class_id
+            image_dir = class_dir / "images"
+            if image_dir.exists():
+                image_paths = sorted(image_dir.glob("*.JPEG"))
+            else:
+                image_paths = sorted(class_dir.glob("*.JPEG"))
+            samples.extend((image_path, self.class_to_idx[class_id]) for image_path in image_paths)
+
+        if not samples:
+            raise RuntimeError(f"No Tiny ImageNet training images found under: {self.train_dir}")
+
+        self.samples = samples
+        self.targets = [target for _, target in self.samples]
+
+    def __len__(self) -> int:
+        return len(self.samples)
+
+    def __getitem__(self, index: int) -> Tuple[torch.Tensor, int]:
+        image_path, target = self.samples[index]
+        with Image.open(image_path) as image:
+            image = image.convert("RGB")
+        if self.transform is not None:
+            image = self.transform(image)
+        return image, target
 
 
 class TinyImageNetValDataset(Dataset):
@@ -85,14 +138,10 @@ def build_transforms(image_size: int = 64) -> tuple[transforms.Compose, transfor
 def build_train_dataset(
     data_root: str | Path,
     image_size: int = 64,
-) -> datasets.ImageFolder:
+) -> TinyImageNetTrainDataset:
     data_root = Path(data_root)
-    train_dir = data_root / "train"
-    if not train_dir.exists():
-        raise FileNotFoundError(f"Missing Tiny ImageNet train directory: {train_dir}")
-
     train_transform, _ = build_transforms(image_size=image_size)
-    return datasets.ImageFolder(train_dir, transform=train_transform)
+    return TinyImageNetTrainDataset(data_root, transform=train_transform)
 
 
 def build_val_dataset(

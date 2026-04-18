@@ -292,6 +292,7 @@ def main() -> None:
     log(f"data_root={args.data_root}")
     log(f"output_dir={args.output_dir}")
 
+    log("building_dataloaders=start")
     train_loader, val_loader, class_to_idx = make_dataloaders(
         data_root=args.data_root,
         batch_size=args.batch_size,
@@ -299,6 +300,7 @@ def main() -> None:
         image_size=args.image_size,
         pin_memory=device.type == "cuda",
     )
+    log("building_dataloaders=done")
     log(f"train_images={len(train_loader.dataset)}")
     log(f"val_images={len(val_loader.dataset)}")
     log(f"num_classes={len(class_to_idx)}")

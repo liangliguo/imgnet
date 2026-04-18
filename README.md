@@ -197,9 +197,15 @@ print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU")
 
 ```text
 device=cuda
+cuda_available=True
 cuda_device_count=2
+data_root=/kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200
+output_dir=/kaggle/working/runs/debug
+building_dataloaders=start
+building_dataloaders=done
 train_images=100000
 val_images=10000
+num_classes=200
 data_parallel=true
 epoch 1/1 lr=0.100000
 start train epoch 1
