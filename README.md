@@ -78,7 +78,7 @@ data/tiny-imagenet-200/
 uv sync --locked
 ```
 
-如果不用 uv，也可以使用 `requirements.txt`：
+pip 安装命令：
 
 ```bash
 python3 -m pip install -r requirements.txt
@@ -110,7 +110,16 @@ uv run --locked python train.py \
   --amp
 ```
 
-如果没有 CUDA 或显存不足，可以去掉 `--amp`，并适当减小 `--batch-size`。
+CPU 或小显存训练命令：
+
+```bash
+uv run --locked python train.py \
+  --data-root data/tiny-imagenet-200 \
+  --output-dir runs/resnet18_tinyimagenet \
+  --epochs 90 \
+  --batch-size 64 \
+  --lr 0.1
+```
 
 训练输出：
 
@@ -122,9 +131,16 @@ uv run --locked python train.py \
 
 ## Kaggle 免费 GPU 训练
 
-Kaggle Notebook 可以免费使用 GPU，但每周额度、单次运行时长和可用 GPU
-型号会随 Kaggle 当前策略变化。实际训练前，以 Notebook 右侧
-`Settings -> Accelerator` 中能选择到的 GPU 为准。
+在 Kaggle 新建 Notebook 后，右侧 `Settings` 中设置：
+
+- `Accelerator`：`GPU P100`
+- `Internet`：`On`
+
+添加 Tiny ImageNet 数据集：
+
+```text
+/kaggle/input/datasets/akash2sharma/tiny-imagenet
+```
 
 本项目的 GitHub 地址：
 
@@ -132,31 +148,15 @@ Kaggle Notebook 可以免费使用 GPU，但每周额度、单次运行时长和
 https://github.com/liangliguo/imgnet
 ```
 
-Kaggle 数据集路径：
-
-```text
-/kaggle/input/datasets/akash2sharma/tiny-imagenet
-```
-
-实际训练时使用的 `--data-root`：
+训练使用的数据根目录：
 
 ```text
 /kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200
 ```
 
-推荐流程：
+在 Kaggle Notebook 中依次执行下面的单元。
 
-1. 在 Kaggle 新建 Notebook。
-2. 点击右侧 `Settings`：
-   - `Accelerator` 选择 `GPU`。
-   - 打开 `Internet`，用于从 GitHub 克隆代码。
-3. 添加 Tiny ImageNet 数据集，确保 Notebook 中能访问挂载目录：
-
-```text
-/kaggle/input/datasets/akash2sharma/tiny-imagenet
-```
-
-在 Kaggle Notebook 中先检查 GPU：
+检查 GPU：
 
 ```python
 !nvidia-smi
@@ -167,36 +167,32 @@ print(torch.cuda.is_available())
 print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU")
 ```
 
-克隆本项目代码：
+克隆代码：
 
 ```python
 !git clone https://github.com/liangliguo/imgnet.git
 %cd imgnet
 ```
 
-Kaggle 通常已经预装 PyTorch。如果依赖缺失，再执行：
+安装依赖：
 
 ```python
 !pip install -q -r requirements.txt
 ```
 
-查看 Kaggle 数据集挂载路径：
+快速检查训练流程：
 
 ```python
-!find /kaggle/input/datasets/akash2sharma/tiny-imagenet -maxdepth 3 -type d | head -50
+!python train.py \
+  --data-root /kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200 \
+  --output-dir /kaggle/working/runs/debug \
+  --epochs 1 \
+  --batch-size 64 \
+  --num-workers 2 \
+  --amp
 ```
 
-训练脚本要求 `--data-root` 指向包含 `train/`、`val/`、`wnids.txt` 的目录。
-根据当前 Kaggle 输出，应使用下面这个目录：
-
-```text
-/kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200
-```
-
-不要把更外层的 `/kaggle/input/datasets/akash2sharma/tiny-imagenet` 传给
-`--data-root`，因为它下面还套了一层 `tiny-imagenet-200`。
-
-训练命令：
+正式训练：
 
 ```python
 !python train.py \
@@ -209,55 +205,7 @@ Kaggle 通常已经预装 PyTorch。如果依赖缺失，再执行：
   --amp
 ```
 
-如果 `find` 输出显示实际结构是：
-
-```text
-/kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200/tiny-imagenet-200/train
-/kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200/tiny-imagenet-200/val
-```
-
-则把训练命令里的 `--data-root` 改为：
-
-```text
-/kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200/tiny-imagenet-200
-```
-
-如果显存不足，把 `--batch-size 128` 改成 `64` 或 `32`。
-
-Kaggle 中路径约定：
-
-- `/kaggle/input`：只读，用于读取数据集。
-- `/kaggle/working`：可写，用于保存 checkpoint、日志和报告。
-
-训练结束后，建议打包输出：
-
-```python
-!zip -r /kaggle/working/resnet18_tinyimagenet_outputs.zip \
-  /kaggle/working/runs/resnet18_tinyimagenet
-```
-
-然后在 Notebook 右侧输出区域下载：
-
-```text
-resnet18_tinyimagenet_outputs.zip
-```
-
-如果一次免费 GPU 时间不够，可以把上一次的 `last.pt` 作为 Kaggle Dataset
-加入下一次 Notebook，然后用 `--resume` 继续训练：
-
-```python
-!python train.py \
-  --data-root /kaggle/input/datasets/akash2sharma/tiny-imagenet/tiny-imagenet-200 \
-  --output-dir /kaggle/working/runs/resnet18_tinyimagenet \
-  --epochs 90 \
-  --batch-size 128 \
-  --num-workers 2 \
-  --lr 0.1 \
-  --amp \
-  --resume /kaggle/input/<previous-run>/last.pt
-```
-
-在 Kaggle 上训练完成后，可以直接评估 FGSM 和 PGD：
+FGSM 和 PGD 评估：
 
 ```python
 !python evaluate_attacks.py \
@@ -268,6 +216,18 @@ resnet18_tinyimagenet_outputs.zip
   --pgd-alpha 2/255 \
   --pgd-steps 10
 ```
+
+打包训练输出：
+
+```python
+!zip -r /kaggle/working/resnet18_tinyimagenet_outputs.zip \
+  /kaggle/working/runs/resnet18_tinyimagenet
+```
+
+Kaggle 路径约定：
+
+- `/kaggle/input`：只读，用于读取数据集。
+- `/kaggle/working`：可写，用于保存 checkpoint、日志和报告。
 
 ## 可汇报的模型质量指标
 
